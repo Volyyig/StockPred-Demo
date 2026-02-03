@@ -6,11 +6,18 @@ from typing import Tuple
 
 import akshare as ak
 import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
 import mplfinance as mpf
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# 设置中文字体支持
+# 优先使用 Windows 自带的微软雅黑 (Microsoft YaHei)，其次是黑体 (SimHei)
+plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'sans-serif']
+plt.rcParams['font.family'] = 'sans-serif'    # 确保全局使用无衬线家族
+plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
 
 @dataclass
@@ -281,8 +288,8 @@ def evaluate_and_plot(
         alpha=0.8,
         linewidth=1.0,
     )
-    ax_price.set_ylabel("价格", fontproperties="SimHei")
-    ax_price.legend(prop={"family": "SimHei"})
+    ax_price.set_ylabel("价格")
+    ax_price.legend()
     ax_price.grid(True, linestyle="--", alpha=0.5)
 
     # MACD
@@ -318,13 +325,13 @@ def evaluate_and_plot(
         ax_rsi.axhline(70, color="red", linestyle="--", linewidth=0.8)
         ax_rsi.axhline(30, color="green", linestyle="--", linewidth=0.8)
         ax_rsi.set_ylabel("RSI")
-        ax_rsi.set_xlabel("日期", fontproperties="SimHei")
+        ax_rsi.set_xlabel("日期")
         ax_rsi.legend(loc="upper left", fontsize=8)
         ax_rsi.grid(True, linestyle="--", alpha=0.5)
 
     fig.suptitle(
         f"A股 {cfg.stock_code} 未来{cfg.predict_horizon_days}日收盘价预测 + 技术指标（测试集）",
-        fontproperties="SimHei",
+        font=FontProperties(family='SimHei', size=16)   # suptitle存在bug, 不受全局字体影响, 需单独设置
     )
     plt.tight_layout(rect=[0, 0.03, 1, 0.97])
 
@@ -368,12 +375,21 @@ def plot_candlestick_with_indicators(
             ]
         )
 
+    # 为 mplfinance 创建自定义样式，继承 yahoo 并指定中文字体
+    my_style = mpf.make_mpf_style(
+        base_mpf_style="yahoo", 
+        rc={
+            "font.family": plt.rcParams['font.sans-serif'],
+            "axes.unicode_minus": False
+        }
+    )
+
     fig, _axes = mpf.plot(
         mpf_df,
         type="candle",
         volume=True,
         addplot=add_plots if add_plots else None,
-        style="yahoo",
+        style=my_style,
         title=f"A股 {cfg.stock_code} K线 + 均线 + 布林带（测试集区间）",
         ylabel="价格",
         ylabel_lower="成交量",
@@ -381,7 +397,7 @@ def plot_candlestick_with_indicators(
         mav=(),
         returnfig=True,
     )
-    plt.tight_layout()
+    # mplfinance 内部已通过 tight_layout=True 处理布局，无需额外调用 plt.tight_layout()
     return fig
 
 
@@ -406,8 +422,8 @@ def plot_feature_importance(
     ax.barh(y_pos, sorted_importances[::-1], align="center", color="steelblue")
     ax.set_yticks(y_pos)
     ax.set_yticklabels(sorted_names[::-1], fontsize=8)
-    ax.set_xlabel("重要性", fontproperties="SimHei")
-    ax.set_title("随机森林特征重要性", fontproperties="SimHei")
+    ax.set_xlabel("重要性")
+    ax.set_title("随机森林特征重要性")
     fig.tight_layout()
     return fig
 
@@ -442,6 +458,13 @@ def main() -> None:
     print("绘制特征重要性（Feature Importance）图表...")
     fig_fi = plot_feature_importance(model, X_train.columns)
 
+    # 保存图表
+    import os
+    if not os.path.exists('img'):
+        os.makedirs('img')
+    fig_eval.savefig('img/技术指标图.png')
+    fig_candle.savefig('img/K 线 + 均线 + 布林带图表.png')
+    fig_fi.savefig('img/特征重要性.png')
 
 if __name__ == "__main__":
     main()
