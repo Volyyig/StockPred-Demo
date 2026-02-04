@@ -49,13 +49,22 @@ def fetch_ashare_daily(cfg: Config) -> pd.DataFrame:
 
     返回包含日期索引和常用字段（open/close/high/low/volume）的 DataFrame。
     """
-    df = ak.stock_zh_a_hist(
-        symbol=cfg.stock_code,
-        period="daily",
-        start_date=cfg.start_date,
-        end_date=cfg.end_date,
-        adjust="qfq",  # 前复权
-    )
+    try:
+        df = ak.stock_zh_a_hist(
+            symbol=cfg.stock_code,
+            period="daily",
+            start_date=cfg.start_date,
+            end_date=cfg.end_date,
+            adjust="qfq",  # 前复权
+        )
+
+        # 保存数据
+        if not os.path.exists('data'):
+            os.makedirs('data')
+        df.to_csv(f"data/{cfg.stock_code}.csv", index=False)
+    except Exception as e:
+        print(f"获取 {cfg.stock_code} 数据失败：{e}")
+        df = pd.read_csv(f"data/{cfg.stock_code}.csv")  # 读取本地数据
 
     if df is None or df.empty:
         raise ValueError(f"没有获取到 {cfg.stock_code} 在 {cfg.start_date}-{cfg.end_date} 的数据")
