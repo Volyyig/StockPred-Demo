@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from typing import Tuple
+import os
 
 import akshare as ak
 import matplotlib.pyplot as plt
